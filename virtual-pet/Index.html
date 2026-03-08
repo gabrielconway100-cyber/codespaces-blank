@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Blob Pet</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0b1220;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    #game {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #qnaWrap {
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      width: 260px;
+      background: rgba(10, 18, 32, 0.92);
+      border: 2px solid rgba(120, 160, 255, 0.5);
+      border-radius: 12px;
+      padding: 10px;
+      color: white;
+      z-index: 20;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+
+    #qnaWrap h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+
+    #qnaInput {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(120, 160, 255, 0.5);
+      background: #18284a;
+      color: white;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    #qnaAsk {
+      margin-top: 8px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      padding: 8px;
+      background: #426fd1;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #qnaAnswer {
+      margin-top: 8px;
+      min-height: 68px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #dce8ff;
+      white-space: pre-wrap;
+    }
+
+    #helpNote {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #9bb7ff;
+    }
+
+    @media (max-width: 900px) {
+      #qnaWrap {
+        width: 220px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="qnaWrap">
+    <h3>Smart Helper</h3>
+    <input id="qnaInput" type="text" placeholder="Ask about your blob..." />
+    <button id="qnaAsk">Ask</button>
+    <div id="qnaAnswer">Ask things like: Why is my blob sad? What should I do next? Do I need the vet?</div>
+    <div id="helpNote">This helper adapts to your blob's current stats.</div>
+  </div>
+
+  <script>
+    /* =========================================================
+       VIRTUAL BLOB PET - FULL SINGLE FILE VERSION
+       Assets folder must be next to index.html
+       ========================================================= */
+
+    const SAVE_KEY = "virtual_blob_pet_full_v1";
+
+    const ROOM_ORDER = ["home", "restaurant", "bedroom", "bathroom", "vet", "shop"];
+
+    const ROOM_INFO = {
+      home: {
+        label: "Home",
+        bg: "bg_main"
+      },
+      restaurant: {
+        label: "Restaurant",
+        bg: "bg_restaurant"
+      },
+      bedroom: {
+        label: "Bedroom",
+        bg: "bg_bedroom"
+      },
+      bathroom: {
+        label: "Bathroom",
+        bg: "bg_bathroom"
+      },
+      vet: {
+        label: "Vet",
+        bg: "bg_vet"
+      },
+      shop: {
+        label: "Shop",
+        bg: "bg_shop"
+      }
+    };
+
+    const SHOP_ITEMS = [
+      {
+        id: "toy_ball",
+        name: "Toy Ball",
+        price: 5,
+        desc: "A simple toy that makes your blob happy.",
+        apply(pet) {
+          pet.badges = pet.badges || [];
+          pet.inventory.push("Toy Ball");
+          pet.health = Math.min(100, pet.health + 2);
+          pet.energy = Math.max(0, pet.energy - 1);
+          pet.mood = "happy";
+          pet.moodUntil = Date.now() + 9000;
+        }
+      },
+      {
+        id: "blue_bow",
+        name: "Blue Bow",
+        price: 7,
+        desc: "Cute cosmetic item for style points.",
+        apply(pet) {
+          pet.inventory.push("Blue Bow");
+          pet.badges = pet.badges || [];
+          if (!pet.badges.includes("Styled Blob")) pet.badges.push("Styled Blob");
+          pet.mood = "happy";
+          pet.moodUntil = Date.now() + 10000;
+        }
+      },
+      {
+        id: "energy_drink",
+        name: "Energy Drink",
+        price: 4,
+        desc: "Boosts energy but makes the blob a little hungry.",
+        apply(pet) {
+          pet.inventory.push("Energy Drink");
+          pet.energy = Math.min(100, pet.energy + 20);
+          pet.hunger = Math.min(100, pet.hunger + 4);
+          pet.mood = "happy";
+          pet.moodUntil = Date.now() + 8000;
+        }
+      }
+    ];
+
+    class PetModel {
+      constructor(data) {
+        if (data) Object.assign(this, data);
+
+        this.id = this.id ?? Date.now().toString(36);
+        this.name = this.name ?? "Blob";
+        this.type = this.type ?? "blob";
+
+        this.hunger = Number.isFinite(this.hunger) ? this.hunger : 45;
+        this.energy = Number.isFinite(this.energy) ? this.energy : 80;
+        this.cleanliness = Number.isFinite(this.cleanliness) ? this.cleanliness : 80;
+        this.health = Number.isFinite(this.health) ? this.health : 100;
+        this.mood = this.mood ?? "idle";
+
+        this.money = Number.isFinite(this.money) ? this.money : 25;
+        this.inventory = Array.isArray(this.inventory) ? this.inventory : [];
+        this.expenses = Array.isArray(this.expenses) ? this.expenses : [];
+        this.badges = Array.isArray(this.badges) ? this.badges : [];
+        this.currentRoom = this.currentRoom ?? "home";
+        this.moodUntil = Number.isFinite(this.moodUntil) ? this.moodUntil : 0;
+        this.lastUpdated = this.lastUpdated ?? new Date().toISOString();
+
+        this.clamp();
+      }
+
+      clamp() {
+        this.hunger = Phaser.Math.Clamp(this.hunger, 0, 100);
+        this.energy = Phaser.Math.Clamp(this.energy, 0, 100);
+        this.cleanliness = Phaser.Math.Clamp(this.cleanliness, 0, 100);
+        this.health = Phaser.Math.Clamp(this.health, 0, 100);
+        this.money = +this.money.toFixed(2);
+      }
+
+      applyExpense(type, amount, note) {
+        if (!Number.isFinite(amount)) return;
+        this.money = +(this.money - amount).toFixed(2);
+        this.expenses.push({
+          date: new Date().toISOString(),
+          type,
+          amount,
+          note
+        });
+      }
+    }
+
+    const SaveManager = {
+      save(pet) {
+        pet.lastUpdated = new Date().toISOString();
+        localStorage.setItem(SAVE_KEY, JSON.stringify(pet));
+      },
+      load() {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return null;
+        try {
+          return new PetModel(JSON.parse(raw));
+        } catch (e) {
+          console.error("Load failed:", e);
+          return null;
+        }
+      },
+      exportJSON(pet) {
+        const blob = new Blob([JSON.stringify(pet, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${pet.name}_pet_data.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    function computeMood(pet) {
+      if (Date.now() < (pet.moodUntil || 0)) return "happy";
+      if (pet.health <= 25 || pet.cleanliness <= 20 || pet.hunger >= 85) return "mad";
+      if (pet.health <= 50 || pet.cleanliness <= 40 || pet.energy <= 25 || pet.hunger >= 70) return "sad";
+      return "idle";
+    }
+
+    function answerPetQuestion(pet, question) {
+      const q = (question || "").toLowerCase().trim();
+
+      if (!q) {
+        return "Try asking:\n• Why is my blob sad?\n• What should I do next?\n• Does it need the vet?";
+      }
+
+      if (q.includes("sad")) {
+        if (pet.hunger >= 70) return "Your blob is probably sad because it is hungry.\nBest move: go to the Restaurant and feed it.";
+        if (pet.energy <= 25) return "Your blob is likely sad because it is tired.\nBest move: go to the Bedroom and let it rest.";
+        if (pet.cleanliness <= 40) return "Your blob looks sad because it feels dirty.\nBest move: go to the Bathroom and clean it.";
+        if (pet.health <= 50) return "Your blob may be sad because its health is low.\nBest move: go to the Vet.";
+        return "Its stats recently dropped. Feeding, cleaning, or resting should help.";
+      }
+
+      if (q.includes("mad") || q.includes("angry")) {
+        if (pet.hunger >= 85) return "Your blob is angry because it is extremely hungry.\nFeed it immediately.";
+        if (pet.cleanliness <= 20) return "Your blob is angry because it is very dirty.\nTake it to the Bathroom.";
+        if (pet.health <= 25) return "Your blob is angry because its health is dangerously low.\nGo to the Vet now.";
+        return "One of its needs is in a bad state. Check hunger, cleanliness, and health.";
+      }
+
+      if (q.includes("next") || q.includes("what should")) {
+        if (pet.hunger >= 70) return "Best next move: Restaurant.\nYour blob needs food.";
+        if (pet.energy <= 30) return "Best next move: Bedroom.\nYour blob needs rest.";
+        if (pet.cleanliness <= 45) return "Best next move: Bathroom.\nYour blob needs cleaning.";
+        if (pet.health <= 50) return "Best next move: Vet.\nIts health needs attention.";
+        return "Best next move: play the mini-game or visit the Shop.";
+      }
+
+      if (q.includes("health") || q.includes("healthy") || q.includes("vet")) {
+        if (pet.health >= 80) return "Health is good right now.";
+        if (pet.health >= 50) return "Health is okay, but it could improve.\nA vet visit would help.";
+        return "Health is low.\nGo to the Vet for treatment.";
+      }
+
+      if (q.includes("money") || q.includes("coins") || q.includes("broke")) {
+        if (pet.money < 5) return "Money is low.\nPlay the mini-game to earn coins.";
+        return `You currently have $${pet.money.toFixed(2)}.\nYou can afford some basic care or shop items.`;
+      }
+
+      if (q.includes("shop")) {
+        return "The Shop sells items that add inventory and affect stats.\nIt also helps your project look more complete.";
+      }
+
+      if (q.includes("dirty") || q.includes("clean")) {
+        if (pet.cleanliness <= 40) return "Your blob needs cleaning.\nGo to the Bathroom.";
+        return "Cleanliness is decent right now.";
+      }
+
+      if (q.includes("hungry") || q.includes("food") || q.includes("eat")) {
+        if (pet.hunger >= 60) return "Yes, your blob needs food.\nGo to the Restaurant.";
+        return "Hunger is under control right now.";
+      }
+
+      return "Check hunger, energy, cleanliness, and health first.\nThen go to the room that matches the biggest need.";
+    }
+
+    class BootScene extends Phaser.Scene {
+      constructor() {
+        super("BootScene");
+      }
+
+      preload() {
+        this.load.image("bg_main", "assets/bg_main.png");
+        this.load.image("bg_bedroom", "assets/bg_bedroom.png");
+        this.load.image("bg_restaurant", "assets/bg_restaurant.png");
+        this.load.image("bg_bathroom", "assets/bg_bathroom.png");
+        this.load.image("bg_vet", "assets/bg_vet.png");
+        this.load.image("bg_shop", "assets/bg_shop.png");
+
+        this.load.image("ui_play", "assets/ui_play.png");
+        this.load.image("ui_shop", "assets/ui_shop.png");
+
+        this.load.image("icon_money", "assets/icon_money.png");
+        this.load.image("icon_food", "assets/icon_food.png");
+        this.load.image("icon_sleep", "assets/icon_sleep.png");
+        this.load.image("icon_clean", "assets/icon_clean.png");
+
+        this.load.spritesheet("pet_idle", "assets/pet_idle.png", {
+          frameWidth: 256,
+          frameHeight: 256
+        });
+
+        this.load.spritesheet("pet_happy", "assets/pet_happy.png", {
+          frameWidth: 256,
+          frameHeight: 256
+        });
+
+        this.load.spritesheet("pet_sad", "assets/pet_sad.png", {
+          frameWidth: 256,
+          frameHeight: 256
+        });
+
+        this.load.spritesheet("pet_mad", "assets/pet_mad.png", {
+          frameWidth: 256,
+          frameHeight: 256
+        });
+      }
+
+      create() {
+        this.scene.start("HomeScene");
+      }
+    }
+
+    class MiniGameScene extends Phaser.Scene {
+      constructor() {
+        super("MiniGameScene");
+      }
+
+      init(data) {
+        this.pet = new PetModel(data.pet);
+        this.score = 0;
+        this.timeLeft = 15;
+      }
+
+      create() {
+        this.cameras.main.setBackgroundColor("#13213f");
+
+        this.add.text(400, 36, "Quick Fetch", {
+          fontSize: "28px",
+          color: "#ffffff"
+        }).setOrigin(0.5);
+
+        this.add.text(400, 68, "Tap the target as many times as you can", {
+          fontSize: "16px",
+          color: "#cfe0ff"
+        }).setOrigin(0.5);
+
+        this.scoreText = this.add.text(24, 24, "Score: 0", {
+          fontSize: "18px",
+          color: "#ffffff"
+        });
+
+        this.timerText = this.add.text(680, 24, "Time: 15", {
+          fontSize: "18px",
+          color: "#ffffff"
+        });
+
+        const target = this.add.circle(400, 300, 34, 0xffffff)
+          .setStrokeStyle(4, 0x6ea8ff)
+          .setInteractive({ useHandCursor: true });
+
+        target.on("pointerdown", () => {
+          this.score += 10;
+          this.scoreText.setText(`Score: ${this.score}`);
+
+          this.tweens.add({
+            targets: target,
+            scale: 1.25,
+            duration: 80,
+            yoyo: true
+          });
+
+          target.x = Phaser.Math.Between(80, 720);
+          target.y = Phaser.Math.Between(120, 520);
+        });
+
+        this.time.addEvent({
+          delay: 1000,
+          loop: true,
+          callback: () => {
+            this.timeLeft--;
+            this.timerText.setText(`Time: ${this.timeLeft}`);
+            if (this.timeLeft <= 0) {
+              this.finishGame();
+            }
+          }
+        });
+
+        const exitBtn = this.add.text(400, 560, "Exit Early", {
+          fontSize: "16px",
+          color: "#ffffff",
+          backgroundColor: "#263d72",
+          padding: { left: 10, right: 10, top: 6, bottom: 6 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        exitBtn.on("pointerdown", () => this.finishGame());
+      }
+
+      finishGame() {
+        if (this.finished) return;
+        this.finished = true;
+
+        const reward = Math.max(5, Math.floor(this.score / 10));
+        this.pet.applyExpense("mini_game_reward", -reward, `Mini-game reward (${this.score} pts)`);
+        this.pet.energy = Math.max(0, this.pet.energy - 8);
+        this.pet.hunger = Math.min(100, this.pet.hunger + 6);
+        this.pet.cleanliness = Math.max(0, this.pet.cleanliness - 2);
+        this.pet.moodUntil = Date.now() + 9000;
+        this.pet.clamp();
+
+        SaveManager.save(this.pet);
+        this.scene.start("HomeScene", { pet: this.pet });
+      }
+    }
+
+    class HomeScene extends Phaser.Scene {
+      constructor() {
+        super("HomeScene");
+      }
+
+      init(data) {
+        this.pet = data && data.pet ? new PetModel(data.pet) : (SaveManager.load() || new PetModel());
+        this.transitioning = false;
+        this.currentRoomIndex = ROOM_ORDER.indexOf(this.pet.currentRoom);
+        if (this.currentRoomIndex < 0) this.currentRoomIndex = 0;
+        this.pet.currentRoom = ROOM_ORDER[this.currentRoomIndex];
+      }
+
+      create() {
+        this.createAnimations();
+
+        this.bgA = this.add.image(400, 300, ROOM_INFO[this.pet.currentRoom].bg).setDisplaySize(800, 600);
+        this.bgB = this.add.image(1200, 300, ROOM_INFO[this.pet.currentRoom].bg).setDisplaySize(800, 600);
+        this.activeBg = this.bgA;
+        this.hiddenBg = this.bgB;
+
+        this.darkTopBar = this.add.rectangle(400, 38, 800, 76, 0x07111f, 0.42);
+        this.bottomBar = this.add.rectangle(400, 548, 800, 104, 0x07111f, 0.72);
+
+        this.roomLabel = this.add.text(400, 24, ROOM_INFO[this.pet.currentRoom].label, {
+          fontSize: "24px",
+          color: "#ffffff"
+        }).setOrigin(0.5);
+
+        this.add.image(26, 28, "icon_money").setScale(0.56);
+        this.moneyText = this.add.text(50, 17, `$${this.pet.money.toFixed(2)}`, {
+          fontSize: "20px",
+          color: "#ffffff"
+        });
+
+        this.statsText = this.add.text(16, 48, "", {
+          fontSize: "13px",
+          color: "#dbe6ff"
+        });
+
+        this.tipText = this.add.text(400, 446, "", {
+          fontSize: "16px",
+          color: "#ffffff",
+          align: "center",
+          wordWrap: { width: 720 }
+        }).setOrigin(0.5);
+
+        this.leftArrow = this.add.text(34, 300, "<", {
+          fontSize: "42px",
+          color: "#ffffff",
+          backgroundColor: "rgba(0,0,0,0.3)",
+          padding: { left: 10, right: 10, top: 4, bottom: 4 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        this.rightArrow = this.add.text(766, 300, ">", {
+          fontSize: "42px",
+          color: "#ffffff",
+          backgroundColor: "rgba(0,0,0,0.3)",
+          padding: { left: 10, right: 10, top: 4, bottom: 4 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        this.leftArrow.on("pointerdown", () => this.changeRoom(-1));
+        this.rightArrow.on("pointerdown", () => this.changeRoom(1));
+
+        this.petShadow = this.add.ellipse(400, 376, 120, 28, 0x000000, 0.22);
+        this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
+
+        this.inventoryText = this.add.text(16, 78, "", {
+          fontSize: "12px",
+          color: "#9fc0ff"
+        });
+
+        this.exportBtn = this.add.text(620, 18, "Export", {
+          fontSize: "15px",
+          color: "#ffffff",
+          backgroundColor: "#27447d",
+          padding: { left: 8, right: 8, top: 6, bottom: 6 }
+        }).setInteractive({ useHandCursor: true });
+
+        this.exportBtn.on("pointerdown", () => SaveManager.exportJSON(this.pet));
+
+        this.playBtn = this.add.image(748, 30, "ui_play").setScale(0.35).setInteractive({ useHandCursor: true });
+        this.playBtn.on("pointerdown", () => this.launchMiniGame());
+
+        this.actionButtons = [];
+        this.buildActionButtons();
+
+        this.setupSwipe();
+
+        this.applyMood(true);
+        this.refreshUI();
+
+        this.time.addEvent({
+          delay: 2000,
+          loop: true,
+          callback: () => {
+            this.tickNeeds();
+            this.applyMood(false);
+            this.refreshUI();
+            SaveManager.save(this.pet);
+          }
+        });
+
+        this.setupQnA();
+      }
+
+      shutdown() {
+        this.removeQnAEvents();
+      }
+
+      destroy() {
+        this.removeQnAEvents();
+        super.destroy();
+      }
+
+      removeQnAEvents() {
+        if (this._qnaHandlerBound && this.qnaAskBtn) {
+          this.qnaAskBtn.removeEventListener("click", this._qnaHandlerBound);
+          this._qnaHandlerBound = null;
+        }
+      }
+
+      setupQnA() {
+        this.qnaInput = document.getElementById("qnaInput");
+        this.qnaAskBtn = document.getElementById("qnaAsk");
+        this.qnaAnswer = document.getElementById("qnaAnswer");
+
+        this.removeQnAEvents();
+
+        this._qnaHandlerBound = () => {
+          const answer = answerPetQuestion(this.pet, this.qnaInput.value);
+          this.qnaAnswer.textContent = answer;
+        };
+
+        this.qnaAskBtn.addEventListener("click", this._qnaHandlerBound);
+      }
+
+      createAnimations() {
+        const makeAnim = (key, sheetKey) => {
+          if (this.anims.exists(key)) return;
+          this.anims.create({
+            key,
+            frames: this.anims.generateFrameNumbers(sheetKey, { start: 0, end: 3 }),
+            frameRate: 6,
+            repeat: -1
+          });
+        };
+
+        makeAnim("anim_idle", "pet_idle");
+        makeAnim("anim_happy", "pet_happy");
+        makeAnim("anim_sad", "pet_sad");
+        makeAnim("anim_mad", "pet_mad");
+      }
+
+      setupSwipe() {
+        this.input.on("pointerup", (pointer) => {
+          if (this.transitioning) return;
+          const dx = pointer.upX - pointer.downX;
+          if (Math.abs(dx) < 60) return;
+          if (dx > 0) this.changeRoom(-1);
+          else this.changeRoom(1);
+        });
+      }
+
+      refreshUI() {
+        this.roomLabel.setText(ROOM_INFO[this.pet.currentRoom].label);
+        this.moneyText.setText(`$${this.pet.money.toFixed(2)}`);
+        this.statsText.setText(
+          `Hunger: ${Math.round(this.pet.hunger)}   Energy: ${Math.round(this.pet.energy)}   Clean: ${Math.round(this.pet.cleanliness)}   Health: ${Math.round(this.pet.health)}   Mood: ${this.pet.mood}`
+        );
+
+        const invPreview = this.pet.inventory.length
+          ? this.pet.inventory.slice(-3).join(", ")
+          : "None";
+        this.inventoryText.setText(`Inventory: ${this.pet.inventory.length} item(s) | Recent: ${invPreview}`);
+
+        this.updateTip();
+        this.buildActionButtons();
+      }
+
+      updateTip() {
+        const tips = {
+          home: "Use arrows or swipe to change rooms. Home is your hub.",
+          restaurant: "Feed your blob here to reduce hunger.",
+          bedroom: "Let your blob rest here to restore energy.",
+          bathroom: "Clean your blob here to improve cleanliness.",
+          vet: "Restore health here if stats get too low.",
+          shop: "Buy items here to add depth and inventory."
+        };
+        this.tipText.setText(tips[this.pet.currentRoom] || "");
+      }
+
+      tickNeeds() {
+        this.pet.hunger = Math.min(100, this.pet.hunger + 1.2);
+        this.pet.energy = Math.max(0, this.pet.energy - 1.0);
+        this.pet.cleanliness = Math.max(0, this.pet.cleanliness - 0.55);
+
+        const badState = this.pet.hunger > 85 || this.pet.energy < 15 || this.pet.cleanliness < 20;
+        if (badState) this.pet.health = Math.max(0, this.pet.health - 1.0);
+        else this.pet.health = Math.min(100, this.pet.health + 0.25);
+
+        this.pet.clamp();
+      }
+
+      setHappyBoost(ms = 9000) {
+        this.pet.moodUntil = Date.now() + ms;
+        this.applyMood(true);
+        this.refreshUI();
+        SaveManager.save(this.pet);
+      }
+
+      applyMood(force) {
+        const desiredMood = computeMood(this.pet);
+        if (!force && this.pet.mood === desiredMood) return;
+
+        this.pet.mood = desiredMood;
+
+        if (desiredMood === "happy") {
+          this.petSprite.play("anim_happy", true);
+          this.tweens.killTweensOf(this.petSprite);
+          this.tweens.add({
+            targets: this.petSprite,
+            y: 278,
+            duration: 420,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+          });
+        } else if (desiredMood === "sad") {
+          this.petSprite.play("anim_sad", true);
+          this.tweens.killTweensOf(this.petSprite);
+          this.petSprite.y = 296;
+        } else if (desiredMood === "mad") {
+          this.petSprite.play("anim_mad", true);
+          this.tweens.killTweensOf(this.petSprite);
+          this.tweens.add({
+            targets: this.petSprite,
+            x: 404,
+            duration: 65,
+            yoyo: true,
+            repeat: -1
+          });
+        } else {
+          this.petSprite.play("anim_idle", true);
+          this.tweens.killTweensOf(this.petSprite);
+          this.petSprite.x = 400;
+          this.petSprite.y = 286;
+        }
+      }
+
+      changeRoom(direction) {
+        if (this.transitioning) return;
+        this.transitioning = true;
+
+        const oldIndex = this.currentRoomIndex;
+        let newIndex = oldIndex + direction;
+        if (newIndex < 0) newIndex = ROOM_ORDER.length - 1;
+        if (newIndex >= ROOM_ORDER.length) newIndex = 0;
+
+        const nextRoom = ROOM_ORDER[newIndex];
+        const nextBgKey = ROOM_INFO[nextRoom].bg;
+
+        const incomingStartX = direction > 0 ? 1200 : -400;
+        const outgoingEndX = direction > 0 ? -400 : 1200;
+
+        this.hiddenBg.setTexture(nextBgKey);
+        this.hiddenBg.x = incomingStartX;
+        this.hiddenBg.y = 300;
+        this.hiddenBg.setDisplaySize(800, 600);
+
+        this.tweens.add({
+          targets: this.activeBg,
+          x: outgoingEndX,
+          duration: 380,
+          ease: "Cubic.easeInOut"
+        });
+
+        this.tweens.add({
+          targets: this.hiddenBg,
+          x: 400,
+          duration: 380,
+          ease: "Cubic.easeInOut",
+          onComplete: () => {
+            const temp = this.activeBg;
+            this.activeBg = this.hiddenBg;
+            this.hiddenBg = temp;
+
+            this.currentRoomIndex = newIndex;
+            this.pet.currentRoom = nextRoom;
+            this.transitioning = false;
+
+            this.refreshUI();
+            SaveManager.save(this.pet);
+          }
+        });
+      }
+
+      clearActionButtons() {
+        this.actionButtons.forEach(obj => obj.destroy());
+        this.actionButtons = [];
+      }
+
+      buildActionButtons() {
+        this.clearActionButtons();
+
+        const addButton = (x, label, onClick, width = 150) => {
+          const bg = this.add.rectangle(x, 548, width, 46, 0x27447d, 0.95)
+            .setStrokeStyle(2, 0x89adff, 0.6)
+            .setInteractive({ useHandCursor: true });
+          const txt = this.add.text(x, 548, label, {
+            fontSize: "14px",
+            color: "#ffffff"
+          }).setOrigin(0.5);
+
+          bg.on("pointerdown", onClick);
+          bg.on("pointerover", () => bg.setFillStyle(0x355aa3, 0.95));
+          bg.on("pointerout", () => bg.setFillStyle(0x27447d, 0.95));
+
+          this.actionButtons.push(bg, txt);
+        };
+
+        if (this.pet.currentRoom === "home") {
+          addButton(180, "Quick Feed", () => this.feedSnack());
+          addButton(340, "Quick Rest", () => this.sleepNap());
+          addButton(500, "Quick Clean", () => this.cleanQuick());
+          addButton(660, "Play Game", () => this.launchMiniGame());
+        }
+
+        if (this.pet.currentRoom === "restaurant") {
+          addButton(220, "Snack ($2)", () => this.feedSnack());
+          addButton(400, "Big Meal ($4)", () => this.feedMeal());
+          addButton(580, "Go Home", () => this.goToRoom("home"));
+        }
+
+        if (this.pet.currentRoom === "bedroom") {
+          addButton(220, "Nap ($0.50)", () => this.sleepNap());
+          addButton(400, "Deep Sleep ($1)", () => this.sleepDeep());
+          addButton(580, "Go Home", () => this.goToRoom("home"));
+        }
+
+        if (this.pet.currentRoom === "bathroom") {
+          addButton(220, "Quick Wash ($1)", () => this.cleanQuick());
+          addButton(400, "Bubble Bath ($2)", () => this.cleanBig());
+          addButton(580, "Go Home", () => this.goToRoom("home"));
+        }
+
+        if (this.pet.currentRoom === "vet") {
+          addButton(220, "Checkup ($3)", () => this.vetCheckup());
+          addButton(400, "Full Treatment ($6)", () => this.vetFull());
+          addButton(580, "Go Home", () => this.goToRoom("home"));
+        }
+
+        if (this.pet.currentRoom === "shop") {
+          addButton(150, "Toy Ball ($5)", () => this.buyItem("toy_ball"));
+          addButton(350, "Blue Bow ($7)", () => this.buyItem("blue_bow"));
+          addButton(550, "Energy Drink ($4)", () => this.buyItem("energy_drink"));
+          addButton(710, "Home", () => this.goToRoom("home"), 90);
+        }
+      }
+
+      goToRoom(roomName) {
+        const newIndex = ROOM_ORDER.indexOf(roomName);
+        if (newIndex === -1) return;
+        this.currentRoomIndex = newIndex;
+        this.pet.currentRoom = roomName;
+        this.activeBg.setTexture(ROOM_INFO[roomName].bg);
+        this.activeBg.x = 400;
+        this.hiddenBg.x = 1200;
+        this.refreshUI();
+        SaveManager.save(this.pet);
+      }
+
+      launchMiniGame() {
+        SaveManager.save(this.pet);
+        this.scene.start("MiniGameScene", { pet: this.pet });
+      }
+
+      spendMoney(cost) {
+        if (this.pet.money < cost) {
+          this.tipText.setText("Not enough money. Play the mini-game to earn more.");
+          return false;
+        }
+        return true;
+      }
+
+      feedSnack() {
+        if (!this.spendMoney(2)) return;
+        this.pet.applyExpense("food", 2.00, "Snack");
+        this.pet.hunger = Math.max(0, this.pet.hunger - 24);
+        this.pet.energy = Math.min(100, this.pet.energy + 2);
+        this.pet.cleanliness = Math.max(0, this.pet.cleanliness - 1);
+        this.pet.clamp();
+        this.tipText.setText("Your blob had a snack.");
+        this.setHappyBoost(8500);
+      }
+
+      feedMeal() {
+        if (!this.spendMoney(4)) return;
+        this.pet.applyExpense("food", 4.00, "Big Meal");
+        this.pet.hunger = Math.max(0, this.pet.hunger - 40);
+        this.pet.energy = Math.min(100, this.pet.energy + 4);
+        this.pet.cleanliness = Math.max(0, this.pet.cleanliness - 2);
+        this.pet.clamp();
+        this.tipText.setText("Your blob had a big meal.");
+        this.setHappyBoost(9500);
+      }
+
+      sleepNap() {
+        if (!this.spendMoney(0.5)) return;
+        this.pet.applyExpense("sleep", 0.50, "Nap");
+        this.pet.energy = Math.min(100, this.pet.energy + 24);
+        this.pet.hunger = Math.min(100, this.pet.hunger + 4);
+        this.pet.clamp();
+        this.tipText.setText("Your blob took a nap.");
+        this.setHappyBoost(8500);
+      }
+
+      sleepDeep() {
+        if (!this.spendMoney(1)) return;
+        this.pet.applyExpense("sleep", 1.00, "Deep Sleep");
+        this.pet.energy = Math.min(100, this.pet.energy + 40);
+        this.pet.hunger = Math.min(100, this.pet.hunger + 7);
+        this.pet.clamp();
+        this.tipText.setText("Your blob got deep rest.");
+        this.setHappyBoost(9500);
+      }
+
+      cleanQuick() {
+        if (!this.spendMoney(1)) return;
+        this.pet.applyExpense("cleaning", 1.00, "Quick Wash");
+        this.pet.cleanliness = Math.min(100, this.pet.cleanliness + 28);
+        this.pet.health = Math.min(100, this.pet.health + 2);
+        this.pet.clamp();
+        this.tipText.setText("Your blob got cleaned up.");
+        this.setHappyBoost(8500);
+      }
+
+      cleanBig() {
+        if (!this.spendMoney(2)) return;
+        this.pet.applyExpense("cleaning", 2.00, "Bubble Bath");
+        this.pet.cleanliness = Math.min(100, this.pet.cleanliness + 44);
+        this.pet.health = Math.min(100, this.pet.health + 4);
+        this.pet.clamp();
+        this.tipText.setText("Bubble bath complete.");
+        this.setHappyBoost(9500);
+      }
+
+      vetCheckup() {
+        if (!this.spendMoney(3)) return;
+        this.pet.applyExpense("vet", 3.00, "Checkup");
+        this.pet.health = Math.min(100, this.pet.health + 24);
+        this.pet.clamp();
+        this.tipText.setText("Vet checkup finished.");
+        this.setHappyBoost(8500);
+      }
+
+      vetFull() {
+        if (!this.spendMoney(6)) return;
+        this.pet.applyExpense("vet", 6.00, "Full Treatment");
+        this.pet.health = Math.min(100, this.pet.health + 50);
+        this.pet.cleanliness = Math.min(100, this.pet.cleanliness + 10);
+        this.pet.clamp();
+        this.tipText.setText("Full treatment complete.");
+        this.setHappyBoost(9500);
+      }
+
+      buyItem(itemId) {
+        const item = SHOP_ITEMS.find(i => i.id === itemId);
+        if (!item) return;
+        if (!this.spendMoney(item.price)) return;
+
+        this.pet.applyExpense("shop", item.price, item.name);
+        item.apply(this.pet);
+        this.pet.clamp();
+
+        this.tipText.setText(`Purchased ${item.name}. ${item.desc}`);
+        this.setHappyBoost(8000);
+      }
+    }
+
+    const config = {
+      type: Phaser.AUTO,
+      parent: "game",
+      width: 800,
+      height: 600,
+      backgroundColor: "#0b1220",
+      scene: [BootScene, HomeScene, MiniGameScene],
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+      }
+    };
+
+    new Phaser.Game(config);
+  </script>
+</body>
+</html>
