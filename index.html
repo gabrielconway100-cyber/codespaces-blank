@@ -30,6 +30,7 @@
       color: white;
       z-index: 20;
       box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      display: none;
     }
 
     #qnaWrap h3 {
@@ -96,40 +97,17 @@
   </div>
 
   <script>
-    /* =========================================================
-       VIRTUAL BLOB PET - FULL SINGLE FILE VERSION
-       Assets folder must be next to index.html
-       ========================================================= */
-
-    const SAVE_KEY = "virtual_blob_pet_full_v1";
+    const SAVE_KEY = "virtual_blob_pet_polished_v1";
 
     const ROOM_ORDER = ["home", "restaurant", "bedroom", "bathroom", "vet", "shop"];
 
     const ROOM_INFO = {
-      home: {
-        label: "Home",
-        bg: "bg_main"
-      },
-      restaurant: {
-        label: "Restaurant",
-        bg: "bg_restaurant"
-      },
-      bedroom: {
-        label: "Bedroom",
-        bg: "bg_bedroom"
-      },
-      bathroom: {
-        label: "Bathroom",
-        bg: "bg_bathroom"
-      },
-      vet: {
-        label: "Vet",
-        bg: "bg_vet"
-      },
-      shop: {
-        label: "Shop",
-        bg: "bg_shop"
-      }
+      home: { label: "Home", bg: "bg_main" },
+      restaurant: { label: "Restaurant", bg: "bg_restaurant" },
+      bedroom: { label: "Bedroom", bg: "bg_bedroom" },
+      bathroom: { label: "Bathroom", bg: "bg_bathroom" },
+      vet: { label: "Vet", bg: "bg_vet" },
+      shop: { label: "Shop", bg: "bg_shop" }
     };
 
     const SHOP_ITEMS = [
@@ -137,13 +115,10 @@
         id: "toy_ball",
         name: "Toy Ball",
         price: 5,
-        desc: "A simple toy that makes your blob happy.",
+        desc: "A fun toy that boosts happiness.",
         apply(pet) {
-          pet.badges = pet.badges || [];
           pet.inventory.push("Toy Ball");
           pet.health = Math.min(100, pet.health + 2);
-          pet.energy = Math.max(0, pet.energy - 1);
-          pet.mood = "happy";
           pet.moodUntil = Date.now() + 9000;
         }
       },
@@ -151,12 +126,10 @@
         id: "blue_bow",
         name: "Blue Bow",
         price: 7,
-        desc: "Cute cosmetic item for style points.",
+        desc: "A cute accessory for your blob.",
         apply(pet) {
           pet.inventory.push("Blue Bow");
-          pet.badges = pet.badges || [];
           if (!pet.badges.includes("Styled Blob")) pet.badges.push("Styled Blob");
-          pet.mood = "happy";
           pet.moodUntil = Date.now() + 10000;
         }
       },
@@ -164,12 +137,11 @@
         id: "energy_drink",
         name: "Energy Drink",
         price: 4,
-        desc: "Boosts energy but makes the blob a little hungry.",
+        desc: "Restores energy but adds a little hunger.",
         apply(pet) {
           pet.inventory.push("Energy Drink");
           pet.energy = Math.min(100, pet.energy + 20);
           pet.hunger = Math.min(100, pet.hunger + 4);
-          pet.mood = "happy";
           pet.moodUntil = Date.now() + 8000;
         }
       }
@@ -261,54 +233,45 @@
       }
 
       if (q.includes("sad")) {
-        if (pet.hunger >= 70) return "Your blob is probably sad because it is hungry.\nBest move: go to the Restaurant and feed it.";
-        if (pet.energy <= 25) return "Your blob is likely sad because it is tired.\nBest move: go to the Bedroom and let it rest.";
-        if (pet.cleanliness <= 40) return "Your blob looks sad because it feels dirty.\nBest move: go to the Bathroom and clean it.";
-        if (pet.health <= 50) return "Your blob may be sad because its health is low.\nBest move: go to the Vet.";
-        return "Its stats recently dropped. Feeding, cleaning, or resting should help.";
+        if (pet.hunger >= 70) return `Your blob is sad mainly because hunger is high at ${Math.round(pet.hunger)}.\nGo to the Restaurant.`;
+        if (pet.energy <= 25) return `Your blob is tired. Energy is only ${Math.round(pet.energy)}.\nGo to the Bedroom.`;
+        if (pet.cleanliness <= 40) return `Your blob feels dirty. Cleanliness is ${Math.round(pet.cleanliness)}.\nGo to the Bathroom.`;
+        if (pet.health <= 50) return `Health is low at ${Math.round(pet.health)}.\nGo to the Vet.`;
+        return "Its stats dipped recently. Feeding, resting, or cleaning should help.";
       }
 
       if (q.includes("mad") || q.includes("angry")) {
-        if (pet.hunger >= 85) return "Your blob is angry because it is extremely hungry.\nFeed it immediately.";
-        if (pet.cleanliness <= 20) return "Your blob is angry because it is very dirty.\nTake it to the Bathroom.";
-        if (pet.health <= 25) return "Your blob is angry because its health is dangerously low.\nGo to the Vet now.";
-        return "One of its needs is in a bad state. Check hunger, cleanliness, and health.";
+        if (pet.hunger >= 85) return `Hunger is critically high at ${Math.round(pet.hunger)}.\nFeed it right now.`;
+        if (pet.cleanliness <= 20) return `Your blob is very dirty.\nTake it to the Bathroom now.`;
+        if (pet.health <= 25) return `Health is dangerously low.\nGo to the Vet immediately.`;
+        return "One of its needs is in a really bad state. Check hunger, health, and cleanliness.";
       }
 
       if (q.includes("next") || q.includes("what should")) {
-        if (pet.hunger >= 70) return "Best next move: Restaurant.\nYour blob needs food.";
-        if (pet.energy <= 30) return "Best next move: Bedroom.\nYour blob needs rest.";
-        if (pet.cleanliness <= 45) return "Best next move: Bathroom.\nYour blob needs cleaning.";
-        if (pet.health <= 50) return "Best next move: Vet.\nIts health needs attention.";
+        if (pet.hunger >= 70) return "Best next move: Restaurant.";
+        if (pet.energy <= 30) return "Best next move: Bedroom.";
+        if (pet.cleanliness <= 45) return "Best next move: Bathroom.";
+        if (pet.health <= 50) return "Best next move: Vet.";
         return "Best next move: play the mini-game or visit the Shop.";
       }
 
       if (q.includes("health") || q.includes("healthy") || q.includes("vet")) {
-        if (pet.health >= 80) return "Health is good right now.";
-        if (pet.health >= 50) return "Health is okay, but it could improve.\nA vet visit would help.";
-        return "Health is low.\nGo to the Vet for treatment.";
+        if (pet.health >= 80) return `Health is good at ${Math.round(pet.health)}.`;
+        if (pet.health >= 50) return `Health is okay at ${Math.round(pet.health)}, but a vet visit would help.`;
+        return `Health is low at ${Math.round(pet.health)}.\nGo to the Vet.`;
       }
 
       if (q.includes("money") || q.includes("coins") || q.includes("broke")) {
-        if (pet.money < 5) return "Money is low.\nPlay the mini-game to earn coins.";
-        return `You currently have $${pet.money.toFixed(2)}.\nYou can afford some basic care or shop items.`;
+        if (pet.money < 5) return "Money is low.\nPlay the mini-game to earn more.";
+        return `You currently have $${pet.money.toFixed(2)}.`;
       }
 
-      if (q.includes("shop")) {
-        return "The Shop sells items that add inventory and affect stats.\nIt also helps your project look more complete.";
+      if (q.includes("inventory") || q.includes("items")) {
+        if (!pet.inventory.length) return "Your inventory is empty right now.";
+        return `You own: ${pet.inventory.join(", ")}`;
       }
 
-      if (q.includes("dirty") || q.includes("clean")) {
-        if (pet.cleanliness <= 40) return "Your blob needs cleaning.\nGo to the Bathroom.";
-        return "Cleanliness is decent right now.";
-      }
-
-      if (q.includes("hungry") || q.includes("food") || q.includes("eat")) {
-        if (pet.hunger >= 60) return "Yes, your blob needs food.\nGo to the Restaurant.";
-        return "Hunger is under control right now.";
-      }
-
-      return "Check hunger, energy, cleanliness, and health first.\nThen go to the room that matches the biggest need.";
+      return "Check hunger, energy, cleanliness, and health first. Then go to the room that matches the biggest need.";
     }
 
     class BootScene extends Phaser.Scene {
@@ -317,6 +280,31 @@
       }
 
       preload() {
+        this.cameras.main.setBackgroundColor("#0b1220");
+
+        this.add.text(400, 170, "Virtual Blob Pet", {
+          fontSize: "38px",
+          color: "#ffffff",
+          fontStyle: "bold"
+        }).setOrigin(0.5);
+
+        this.add.text(400, 215, "Take Care of Your Own Virtual Pet!", {
+          fontSize: "18px",
+          color: "#cfe0ff"
+        }).setOrigin(0.5);
+
+        this.add.text(400, 280, "Loading...", {
+          fontSize: "20px",
+          color: "#ffffff"
+        }).setOrigin(0.5);
+
+        const box = this.add.rectangle(400, 330, 340, 28, 0x14233f).setStrokeStyle(2, 0x6e98ff);
+        const bar = this.add.rectangle(232, 330, 0, 20, 0x5b8dff).setOrigin(0, 0.5);
+
+        this.load.on("progress", (value) => {
+          bar.width = 332 * value;
+        });
+
         this.load.image("bg_main", "assets/bg_main.png");
         this.load.image("bg_bedroom", "assets/bg_bedroom.png");
         this.load.image("bg_restaurant", "assets/bg_restaurant.png");
@@ -354,7 +342,72 @@
       }
 
       create() {
-        this.scene.start("HomeScene");
+        this.scene.start("TitleScene");
+      }
+    }
+
+    class TitleScene extends Phaser.Scene {
+      constructor() {
+        super("TitleScene");
+      }
+
+      create() {
+        this.cameras.main.setBackgroundColor("#0b1220");
+
+        this.add.rectangle(400, 300, 800, 600, 0x0b1220);
+
+        this.add.text(400, 135, "Virtual Blob Pet", {
+          fontSize: "46px",
+          color: "#ffffff",
+          fontStyle: "bold"
+        }).setOrigin(0.5);
+
+        this.add.text(400, 185, "Take Care of Your Own Virtual Pet!", {
+          fontSize: "20px",
+          color: "#cfe0ff"
+        }).setOrigin(0.5);
+
+        if (!this.anims.exists("title_blob_idle")) {
+          this.anims.create({
+            key: "title_blob_idle",
+            frames: this.anims.generateFrameNumbers("pet_idle", { start: 0, end: 3 }),
+            frameRate: 6,
+            repeat: -1
+          });
+        }
+
+        const blob = this.add.sprite(400, 310, "pet_idle").setScale(1);
+        blob.play("title_blob_idle");
+
+        this.tweens.add({
+          targets: blob,
+          y: 300,
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+
+        const startBtn = this.add.rectangle(400, 455, 220, 58, 0x406fdd)
+          .setStrokeStyle(3, 0xa3c1ff)
+          .setInteractive({ useHandCursor: true });
+
+        const startText = this.add.text(400, 455, "Start Game", {
+          fontSize: "24px",
+          color: "#ffffff",
+          fontStyle: "bold"
+        }).setOrigin(0.5);
+
+        startBtn.on("pointerover", () => startBtn.setFillStyle(0x5682f2));
+        startBtn.on("pointerout", () => startBtn.setFillStyle(0x406fdd));
+        startBtn.on("pointerdown", () => {
+          this.scene.start("HomeScene");
+        });
+
+        this.add.text(400, 530, "Explore rooms, care for your blob, and earn coins.", {
+          fontSize: "15px",
+          color: "#a9c4ff"
+        }).setOrigin(0.5);
       }
     }
 
@@ -464,6 +517,7 @@
       }
 
       create() {
+        document.getElementById("qnaWrap").style.display = "block";
         this.createAnimations();
 
         this.bgA = this.add.image(400, 300, ROOM_INFO[this.pet.currentRoom].bg).setDisplaySize(800, 600);
@@ -471,8 +525,9 @@
         this.activeBg = this.bgA;
         this.hiddenBg = this.bgB;
 
-        this.darkTopBar = this.add.rectangle(400, 38, 800, 76, 0x07111f, 0.42);
-        this.bottomBar = this.add.rectangle(400, 548, 800, 104, 0x07111f, 0.72);
+        this.darkTopBar = this.add.rectangle(400, 42, 800, 84, 0x07111f, 0.42);
+        this.bottomBar = this.add.rectangle(400, 548, 800, 104, 0x07111f, 0.74);
+        this.inventoryPanel = this.add.rectangle(675, 470, 220, 120, 0x0b1730, 0.88).setStrokeStyle(2, 0x7ca2ff, 0.45);
 
         this.roomLabel = this.add.text(400, 24, ROOM_INFO[this.pet.currentRoom].label, {
           fontSize: "24px",
@@ -490,7 +545,7 @@
           color: "#dbe6ff"
         });
 
-        this.tipText = this.add.text(400, 446, "", {
+        this.tipText = this.add.text(400, 440, "", {
           fontSize: "16px",
           color: "#ffffff",
           align: "center",
@@ -517,9 +572,22 @@
         this.petShadow = this.add.ellipse(400, 376, 120, 28, 0x000000, 0.22);
         this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
 
-        this.inventoryText = this.add.text(16, 78, "", {
+        this.inventoryTitle = this.add.text(585, 420, "Inventory", {
+          fontSize: "18px",
+          color: "#ffffff",
+          fontStyle: "bold"
+        });
+
+        this.inventoryText = this.add.text(585, 450, "", {
           fontSize: "12px",
-          color: "#9fc0ff"
+          color: "#cfe0ff",
+          wordWrap: { width: 180 }
+        });
+
+        this.badgeText = this.add.text(585, 520, "", {
+          fontSize: "11px",
+          color: "#9fc0ff",
+          wordWrap: { width: 180 }
         });
 
         this.exportBtn = this.add.text(620, 18, "Export", {
@@ -529,7 +597,10 @@
           padding: { left: 8, right: 8, top: 6, bottom: 6 }
         }).setInteractive({ useHandCursor: true });
 
-        this.exportBtn.on("pointerdown", () => SaveManager.exportJSON(this.pet));
+        this.exportBtn.on("pointerdown", () => {
+          SaveManager.exportJSON(this.pet);
+          this.showToast("Data exported");
+        });
 
         this.playBtn = this.add.image(748, 30, "ui_play").setScale(0.35).setInteractive({ useHandCursor: true });
         this.playBtn.on("pointerdown", () => this.launchMiniGame());
@@ -537,10 +608,28 @@
         this.actionButtons = [];
         this.buildActionButtons();
 
+        this.toastBg = this.add.rectangle(400, 90, 240, 42, 0x0a1730, 0.92).setStrokeStyle(2, 0x82a7ff, 0.45);
+        this.toastText = this.add.text(400, 90, "", {
+          fontSize: "16px",
+          color: "#ffffff"
+        }).setOrigin(0.5);
+        this.toastBg.setVisible(false);
+        this.toastText.setVisible(false);
+
         this.setupSwipe();
+        this.setupQnA();
 
         this.applyMood(true);
         this.refreshUI();
+
+        this.time.addEvent({
+          delay: 5000,
+          loop: true,
+          callback: () => {
+            SaveManager.save(this.pet);
+            this.showToast("Game saved");
+          }
+        });
 
         this.time.addEvent({
           delay: 2000,
@@ -552,17 +641,39 @@
             SaveManager.save(this.pet);
           }
         });
-
-        this.setupQnA();
       }
 
       shutdown() {
+        document.getElementById("qnaWrap").style.display = "none";
         this.removeQnAEvents();
       }
 
       destroy() {
+        document.getElementById("qnaWrap").style.display = "none";
         this.removeQnAEvents();
         super.destroy();
+      }
+
+      showToast(message) {
+        this.toastBg.setVisible(true);
+        this.toastText.setVisible(true);
+        this.toastText.setText(message);
+        this.toastBg.alpha = 0.92;
+        this.toastText.alpha = 1;
+
+        this.tweens.killTweensOf(this.toastBg);
+        this.tweens.killTweensOf(this.toastText);
+
+        this.tweens.add({
+          targets: [this.toastBg, this.toastText],
+          alpha: 0,
+          delay: 900,
+          duration: 450,
+          onComplete: () => {
+            this.toastBg.setVisible(false);
+            this.toastText.setVisible(false);
+          }
+        });
       }
 
       removeQnAEvents() {
@@ -621,10 +732,17 @@
           `Hunger: ${Math.round(this.pet.hunger)}   Energy: ${Math.round(this.pet.energy)}   Clean: ${Math.round(this.pet.cleanliness)}   Health: ${Math.round(this.pet.health)}   Mood: ${this.pet.mood}`
         );
 
-        const invPreview = this.pet.inventory.length
-          ? this.pet.inventory.slice(-3).join(", ")
-          : "None";
-        this.inventoryText.setText(`Inventory: ${this.pet.inventory.length} item(s) | Recent: ${invPreview}`);
+        this.inventoryText.setText(
+          this.pet.inventory.length
+            ? this.pet.inventory.slice(-5).join("\n")
+            : "No items yet"
+        );
+
+        this.badgeText.setText(
+          this.pet.badges.length
+            ? `Badges: ${this.pet.badges.join(", ")}`
+            : "Badges: None yet"
+        );
 
         this.updateTip();
         this.buildActionButtons();
@@ -632,12 +750,12 @@
 
       updateTip() {
         const tips = {
-          home: "Use arrows or swipe to change rooms. Home is your hub.",
-          restaurant: "Feed your blob here to reduce hunger.",
-          bedroom: "Let your blob rest here to restore energy.",
-          bathroom: "Clean your blob here to improve cleanliness.",
-          vet: "Restore health here if stats get too low.",
-          shop: "Buy items here to add depth and inventory."
+          home: "Home is your main hub. Use arrows or swipe to change rooms.",
+          restaurant: "Feed your blob here to lower hunger.",
+          bedroom: "Rest here to restore energy.",
+          bathroom: "Clean your blob here.",
+          vet: "Heal your blob here when health is low.",
+          shop: "Buy items to improve depth and inventory."
         };
         this.tipText.setText(tips[this.pet.currentRoom] || "");
       }
@@ -667,9 +785,10 @@
 
         this.pet.mood = desiredMood;
 
+        this.tweens.killTweensOf(this.petSprite);
+
         if (desiredMood === "happy") {
           this.petSprite.play("anim_happy", true);
-          this.tweens.killTweensOf(this.petSprite);
           this.tweens.add({
             targets: this.petSprite,
             y: 278,
@@ -680,11 +799,10 @@
           });
         } else if (desiredMood === "sad") {
           this.petSprite.play("anim_sad", true);
-          this.tweens.killTweensOf(this.petSprite);
+          this.petSprite.x = 400;
           this.petSprite.y = 296;
         } else if (desiredMood === "mad") {
           this.petSprite.play("anim_mad", true);
-          this.tweens.killTweensOf(this.petSprite);
           this.tweens.add({
             targets: this.petSprite,
             x: 404,
@@ -694,7 +812,6 @@
           });
         } else {
           this.petSprite.play("anim_idle", true);
-          this.tweens.killTweensOf(this.petSprite);
           this.petSprite.x = 400;
           this.petSprite.y = 286;
         }
@@ -830,6 +947,7 @@
       spendMoney(cost) {
         if (this.pet.money < cost) {
           this.tipText.setText("Not enough money. Play the mini-game to earn more.");
+          this.showToast("Not enough money");
           return false;
         }
         return true;
@@ -843,6 +961,7 @@
         this.pet.cleanliness = Math.max(0, this.pet.cleanliness - 1);
         this.pet.clamp();
         this.tipText.setText("Your blob had a snack.");
+        this.showToast("Fed blob");
         this.setHappyBoost(8500);
       }
 
@@ -854,6 +973,7 @@
         this.pet.cleanliness = Math.max(0, this.pet.cleanliness - 2);
         this.pet.clamp();
         this.tipText.setText("Your blob had a big meal.");
+        this.showToast("Big meal complete");
         this.setHappyBoost(9500);
       }
 
@@ -864,6 +984,7 @@
         this.pet.hunger = Math.min(100, this.pet.hunger + 4);
         this.pet.clamp();
         this.tipText.setText("Your blob took a nap.");
+        this.showToast("Nap complete");
         this.setHappyBoost(8500);
       }
 
@@ -874,6 +995,7 @@
         this.pet.hunger = Math.min(100, this.pet.hunger + 7);
         this.pet.clamp();
         this.tipText.setText("Your blob got deep rest.");
+        this.showToast("Deep sleep complete");
         this.setHappyBoost(9500);
       }
 
@@ -884,6 +1006,7 @@
         this.pet.health = Math.min(100, this.pet.health + 2);
         this.pet.clamp();
         this.tipText.setText("Your blob got cleaned up.");
+        this.showToast("Blob cleaned");
         this.setHappyBoost(8500);
       }
 
@@ -894,6 +1017,7 @@
         this.pet.health = Math.min(100, this.pet.health + 4);
         this.pet.clamp();
         this.tipText.setText("Bubble bath complete.");
+        this.showToast("Bubble bath complete");
         this.setHappyBoost(9500);
       }
 
@@ -903,6 +1027,7 @@
         this.pet.health = Math.min(100, this.pet.health + 24);
         this.pet.clamp();
         this.tipText.setText("Vet checkup finished.");
+        this.showToast("Health restored");
         this.setHappyBoost(8500);
       }
 
@@ -913,6 +1038,7 @@
         this.pet.cleanliness = Math.min(100, this.pet.cleanliness + 10);
         this.pet.clamp();
         this.tipText.setText("Full treatment complete.");
+        this.showToast("Full treatment complete");
         this.setHappyBoost(9500);
       }
 
@@ -926,6 +1052,7 @@
         this.pet.clamp();
 
         this.tipText.setText(`Purchased ${item.name}. ${item.desc}`);
+        this.showToast(`Bought ${item.name}`);
         this.setHappyBoost(8000);
       }
     }
@@ -936,7 +1063,7 @@
       width: 800,
       height: 600,
       backgroundColor: "#0b1220",
-      scene: [BootScene, HomeScene, MiniGameScene],
+      scene: [BootScene, TitleScene, HomeScene, MiniGameScene],
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
