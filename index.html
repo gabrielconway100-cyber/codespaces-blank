@@ -529,7 +529,7 @@
         if (this.currentRoomIndex < 0) this.currentRoomIndex = 0;
         this.pet.currentRoom = ROOM_ORDER[this.currentRoomIndex];
       }
-
+// Create the main game interface, load pet data, and set up interactions
       create() {
         document.getElementById("qnaWrap").style.display = "block";
         this.createAnimations();
@@ -541,7 +541,10 @@
 
         this.darkTopBar = this.add.rectangle(400, 42, 800, 84, 0x07111f, 0.42);
         this.bottomBar = this.add.rectangle(400, 548, 800, 104, 0x07111f, 0.74);
-        this.inventoryPanel = this.add.rectangle(675, 470, 220, 120, 0x0b1730, 0.88).setStrokeStyle(2, 0x7ca2ff, 0.45);
+        // make the inventory panel taller and put it behind the text
+        this.inventoryPanel = this.add.rectangle(675, 470, 220, 160, 0x0b1730, 0.88)
+          .setStrokeStyle(2, 0x7ca2ff, 0.45)
+          .setDepth(20);
 
         this.roomLabel = this.add.text(400, 24, ROOM_INFO[this.pet.currentRoom].label, {
           fontSize: "24px",
@@ -586,23 +589,24 @@
         this.petShadow = this.add.ellipse(400, 376, 120, 28, 0x000000, 0.22);
         this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
 
-        this.inventoryTitle = this.add.text(585, 315, "Inventory", {
+  // position the inventory text elements within the panel area
+        this.inventoryTitle = this.add.text(675, 430, "Inventory", {
           fontSize: "18px",
           color: "#ffffff",
           fontStyle: "bold"
-        }).setDepth(21);
+        }).setOrigin(0.5).setDepth(21);
 
-        this.inventoryText = this.add.text(585, 345, "", {
+        this.inventoryText = this.add.text(675, 460, "", {
           fontSize: "12px",
           color: "#cfe0ff",
           wordWrap: { width: 180 }
-        }).setDepth(21);
+        }).setOrigin(0.5).setDepth(21);
 
-        this.badgeText = this.add.text(585, 410, "", {
+        this.badgeText = this.add.text(675, 490, "", {
           fontSize: "11px",
           color: "#9fc0ff",
           wordWrap: { width: 180 }
-        }).setDepth(21);
+        }).setOrigin(0.5).setDepth(21);
 
         this.exportBtn = this.add.text(620, 18, "Export", {
           fontSize: "15px",
