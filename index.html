@@ -539,8 +539,9 @@
         this.activeBg = this.bgA;
         this.hiddenBg = this.bgB;
 
-// make the inventory panel smaller and put it behind the text
-        this.inventoryPanel = this.add.rectangle(675, 450, 180, 120, 0x0b1730, 0.88)
+// position the inventory panel toward the top‑right so it no longer collides with bottom text
+        // keep it left of the Q&A overlay to ensure visibility
+        this.inventoryPanel = this.add.rectangle(520, 100, 180, 130, 0x0b1730, 0.88)
           .setStrokeStyle(2, 0x7ca2ff, 0.45)
           .setDepth(20);
 
@@ -588,19 +589,20 @@
         this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
 
         // position the inventory text elements within the panel area
-        this.inventoryTitle = this.add.text(675, 420, "Inventory", {
+        // coordinates match the panel's new top‑right location
+        this.inventoryTitle = this.add.text(520, 70, "Inventory", {
           fontSize: "16px",
           color: "#ffffff",
           fontStyle: "bold"
         }).setOrigin(0.5).setDepth(21);
 
-        this.inventoryText = this.add.text(675, 440, "", {
+        this.inventoryText = this.add.text(520, 100, "", {
           fontSize: "11px",
           color: "#cfe0ff",
           wordWrap: { width: 160 }
         }).setOrigin(0.5).setDepth(21);
 
-        this.badgeText = this.add.text(675, 460, "", {
+        this.badgeText = this.add.text(520, 120, "", {
           fontSize: "10px",
           color: "#9fc0ff",
           wordWrap: { width: 160 }
