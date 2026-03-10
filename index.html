@@ -1,9 +1,12 @@
 <!doctype html>
+<!-- Main HTML structure for the Virtual Blob Pet game -->
 <html lang="en">
 <head>
+  <!-- Document metadata and responsive settings -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Virtual Blob Pet</title>
+  <!-- Embedded CSS for game styling -->
   <style>
     html, body {
       margin: 0;
@@ -83,11 +86,14 @@
       }
     }
   </style>
+  <!-- Load Phaser game framework -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
+  <!-- Main game canvas will be injected here by Phaser -->
   <div id="game"></div>
 
+  <!-- Q&A helper overlay, hidden by default -->
   <div id="qnaWrap">
     <h3>Smart Helper</h3>
     <input id="qnaInput" type="text" placeholder="Ask about your blob..." />
@@ -97,6 +103,7 @@
   </div>
 
   <script>
+    // ********* Game data & configuration constants *********
     const SAVE_KEY = "virtual_blob_pet_polished_v1";
 
     const ROOM_ORDER = ["home", "restaurant", "bedroom", "bathroom", "vet", "shop"];
@@ -192,6 +199,7 @@
       }
     }
 
+    // Helper object for saving/loading to localStorage
     const SaveManager = {
       save(pet) {
         pet.lastUpdated = new Date().toISOString();
@@ -218,6 +226,7 @@
       }
     };
 
+    // Determine mood based on current pet stats
     function computeMood(pet) {
       if (Date.now() < (pet.moodUntil || 0)) return "happy";
       if (pet.health <= 25 || pet.cleanliness <= 20 || pet.hunger >= 85) return "mad";
@@ -225,6 +234,7 @@
       return "idle";
     }
 
+    // Provide a response to user questions based on pet stats
     function answerPetQuestion(pet, question) {
       const q = (question || "").toLowerCase().trim();
 
@@ -274,6 +284,7 @@
       return "Check hunger, energy, cleanliness, and health first. Then go to the room that matches the biggest need.";
     }
 
+    // Initial loading scene with progress bar
     class BootScene extends Phaser.Scene {
       constructor() {
         super("BootScene");
@@ -346,6 +357,7 @@
       }
     }
 
+    // Main title/menu screen
     class TitleScene extends Phaser.Scene {
       constructor() {
         super("TitleScene");
@@ -411,6 +423,7 @@
       }
     }
 
+    // Quick mini-game for earning money
     class MiniGameScene extends Phaser.Scene {
       constructor() {
         super("MiniGameScene");
@@ -503,6 +516,7 @@
       }
     }
 
+    // Core gameplay scene where player interacts with pet
     class HomeScene extends Phaser.Scene {
       constructor() {
         super("HomeScene");
@@ -572,23 +586,23 @@
         this.petShadow = this.add.ellipse(400, 376, 120, 28, 0x000000, 0.22);
         this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
 
-        this.inventoryTitle = this.add.text(585, 420, "Inventory", {
+        this.inventoryTitle = this.add.text(585, 315, "Inventory", {
           fontSize: "18px",
           color: "#ffffff",
           fontStyle: "bold"
-        });
+        }).setDepth(21);
 
-        this.inventoryText = this.add.text(585, 450, "", {
+        this.inventoryText = this.add.text(585, 345, "", {
           fontSize: "12px",
           color: "#cfe0ff",
           wordWrap: { width: 180 }
-        });
+        }).setDepth(21);
 
-        this.badgeText = this.add.text(585, 520, "", {
+        this.badgeText = this.add.text(585, 410, "", {
           fontSize: "11px",
           color: "#9fc0ff",
           wordWrap: { width: 180 }
-        });
+        }).setDepth(21);
 
         this.exportBtn = this.add.text(620, 18, "Export", {
           fontSize: "15px",
@@ -1057,6 +1071,7 @@
       }
     }
 
+    // Phaser game configuration and launch
     const config = {
       type: Phaser.AUTO,
       parent: "game",
