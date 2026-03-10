@@ -223,6 +223,9 @@
         a.download = `${pet.name}_pet_data.json`;
         a.click();
         URL.revokeObjectURL(url);
+      },
+      reset() {
+        localStorage.removeItem(SAVE_KEY);
       }
     };
 
@@ -622,6 +625,20 @@
         this.exportBtn.on("pointerdown", () => {
           SaveManager.exportJSON(this.pet);
           this.showToast("Data exported");
+        });
+
+        this.resetBtn = this.add.text(520, 18, "Reset", {
+          fontSize: "15px",
+          color: "#ffffff",
+          backgroundColor: "#8b0000",
+          padding: { left: 8, right: 8, top: 6, bottom: 6 }
+        }).setInteractive({ useHandCursor: true });
+
+        this.resetBtn.on("pointerdown", () => {
+          if (confirm("Are you sure you want to reset all data? This cannot be undone.")) {
+            SaveManager.reset();
+            location.reload();
+          }
         });
 
         this.playBtn = this.add.image(748, 30, "ui_play").setScale(0.35).setInteractive({ useHandCursor: true });
