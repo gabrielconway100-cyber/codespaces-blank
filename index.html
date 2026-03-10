@@ -541,11 +541,8 @@
 
 // anchor the inventory panel at the very top‑right of the game canvas
         // use origin (1,0) so x,y refer to the panel's top‑right corner
-        // position panel at the absolute top-right of the game canvas
-        // ignore the overlay; the user's concern was bottom overlap only.
-        const invX = this.scale.width - 20; // 20px padding from right edge
-        const invY = 20; // 20px padding from top
-        this.inventoryPanel = this.add.rectangle(invX, invY, 180, 130, 0x0b1730, 0.88)
+        // position panel at top-right, avoiding overlap with play button at 748,30 and export at 620,18
+        this.inventoryPanel = this.add.rectangle(680, 20, 180, 130, 0x0b1730, 0.88)
           .setOrigin(1, 0)
           .setStrokeStyle(2, 0x7ca2ff, 0.45)
           .setDepth(20);
@@ -594,23 +591,22 @@
         this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
 
         // position the inventory text elements inside the panel with clear vertical gaps
-        const textX = invX - 90; // panel width/2
         // use origin 0.5,0 to align top-centre and make spacing calculations easier
-        this.inventoryTitle = this.add.text(textX, invY + 8, "Inventory", {
+        this.inventoryTitle = this.add.text(590, 28, "Inventory", {
           fontSize: "16px",
           color: "#ffffff",
           fontStyle: "bold"
         }).setOrigin(0.5, 0).setDepth(21);
 
         // ensure at least 10px separation between title and items
-        this.inventoryText = this.add.text(textX, invY + 30, "", {
+        this.inventoryText = this.add.text(590, 50, "", {
           fontSize: "11px",
           color: "#cfe0ff",
           wordWrap: { width: 160 }
         }).setOrigin(0.5, 0).setDepth(21);
 
         // ensure at least 10px separation between items and badges
-        this.badgeText = this.add.text(textX, invY + 60, "", {
+        this.badgeText = this.add.text(590, 80, "", {
           fontSize: "10px",
           color: "#9fc0ff",
           wordWrap: { width: 160 }
