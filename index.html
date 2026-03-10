@@ -539,9 +539,15 @@
         this.activeBg = this.bgA;
         this.hiddenBg = this.bgB;
 
-// position the inventory panel toward the top‑right so it no longer collides with bottom text
-        // keep it left of the Q&A overlay to ensure visibility
-        this.inventoryPanel = this.add.rectangle(520, 100, 180, 130, 0x0b1730, 0.88)
+// anchor the inventory panel at the very top‑right of the game canvas
+        // use origin (1,0) so x,y refer to the panel's top‑right corner
+        // keep panel at top‑right **but** leave space for the fixed HTML helper
+        // overlay (≈260px wide plus 14px margin). this ensures the panel is
+        // visible rather than being covered by the helper.
+        const invX = this.scale.width - 300; // stay 300px from right edge
+        const invY = 60;                     // a little below the top
+        this.inventoryPanel = this.add.rectangle(invX, invY, 180, 130, 0x0b1730, 0.88)
+          .setOrigin(1, 0)
           .setStrokeStyle(2, 0x7ca2ff, 0.45)
           .setDepth(20);
 
@@ -588,21 +594,20 @@
         this.petShadow = this.add.ellipse(400, 376, 120, 28, 0x000000, 0.22);
         this.petSprite = this.add.sprite(400, 286, "pet_idle").setScale(0.95);
 
-        // position the inventory text elements within the panel area
-        // coordinates match the panel's new top‑right location
-        this.inventoryTitle = this.add.text(520, 70, "Inventory", {
+        // position the inventory text elements relative to the panel's top‑right
+        this.inventoryTitle = this.add.text(invX - 90, invY - 10, "Inventory", {
           fontSize: "16px",
           color: "#ffffff",
           fontStyle: "bold"
         }).setOrigin(0.5).setDepth(21);
 
-        this.inventoryText = this.add.text(520, 100, "", {
+        this.inventoryText = this.add.text(invX - 90, invY + 10, "", {
           fontSize: "11px",
           color: "#cfe0ff",
           wordWrap: { width: 160 }
         }).setOrigin(0.5).setDepth(21);
 
-        this.badgeText = this.add.text(520, 120, "", {
+        this.badgeText = this.add.text(invX - 90, invY + 30, "", {
           fontSize: "10px",
           color: "#9fc0ff",
           wordWrap: { width: 160 }
