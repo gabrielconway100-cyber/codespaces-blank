@@ -541,15 +541,10 @@
 
 // anchor the inventory panel at the very top‑right of the game canvas
         // use origin (1,0) so x,y refer to the panel's top‑right corner
-        // compute right-edge position based on the helper overlay's width
-        // so the panel truly hugs the canvas's right border and never drifts
-        // toward the center. also ensure at least 20px gap to the overlay.
-        const helperEl = document.getElementById("qnaWrap");
-        const helperWidth = helperEl ? helperEl.offsetWidth : 260;
-        const helperMargin = 14;
-        const invPadding = 20; // gap between panel and helper/edge
-        const invX = this.scale.width - helperWidth - helperMargin - invPadding;
-        const invY = 20; // top padding from canvas edge
+        // position panel at the absolute top-right of the game canvas
+        // ignore the overlay; the user's concern was bottom overlap only.
+        const invX = this.scale.width - 20; // 20px padding from right edge
+        const invY = 20; // 20px padding from top
         this.inventoryPanel = this.add.rectangle(invX, invY, 180, 130, 0x0b1730, 0.88)
           .setOrigin(1, 0)
           .setStrokeStyle(2, 0x7ca2ff, 0.45)
@@ -607,13 +602,15 @@
           fontStyle: "bold"
         }).setOrigin(0.5, 0).setDepth(21);
 
+        // ensure at least 10px separation between title and items
         this.inventoryText = this.add.text(textX, invY + 30, "", {
           fontSize: "11px",
           color: "#cfe0ff",
           wordWrap: { width: 160 }
         }).setOrigin(0.5, 0).setDepth(21);
 
-        this.badgeText = this.add.text(textX, invY + 70, "", {
+        // ensure at least 10px separation between items and badges
+        this.badgeText = this.add.text(textX, invY + 60, "", {
           fontSize: "10px",
           color: "#9fc0ff",
           wordWrap: { width: 160 }
